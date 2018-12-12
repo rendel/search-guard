@@ -382,11 +382,6 @@ public final class IndexResolverReplacer {
             @Override
             public String[] provide(String[] original, Object localRequest, boolean supportsReplace) {
 
-                IndicesOptions indicesOptions = IndicesOptions.fromOptions(true, true, true, false);
-                if (localRequest instanceof IndicesRequest) {
-                    indicesOptions = ((IndicesRequest) localRequest).indicesOptions();
-                }
-
                 //CCS
                 if((localRequest instanceof FieldCapabilitiesRequest || localRequest instanceof SearchRequest)
                         && (request instanceof FieldCapabilitiesRequest || request instanceof SearchRequest)) {
@@ -406,6 +401,7 @@ public final class IndexResolverReplacer {
                     }
 
                 } else {
+                    IndicesOptions indicesOptions = indicesOptionsFrom(localRequest);
                     final Resolved iResolved = resolveIndexPatterns(indicesOptions, original);
 
                     if(log.isTraceEnabled()) {
@@ -432,6 +428,17 @@ public final class IndexResolverReplacer {
         return resolvedBuilder.build();
     }
 
+    private IndicesOptions indicesOptionsFrom(Object localRequest) {
+        if (IndicesRequest.class.isInstance(localRequest)) {
+            return ((IndicesRequest) localRequest).indicesOptions();
+        }
+        else if (RestoreSnapshotRequest.class.isInstance(localRequest)) {
+            return ((RestoreSnapshotRequest) localRequest).indicesOptions();
+        }
+        else {
+            return IndicesOptions.fromOptions(true, true, true, false);
+        }
+    }
 
     private Tuple<Boolean, String[]> handleCcs(final IndicesRequest.Replaceable request) {
 
