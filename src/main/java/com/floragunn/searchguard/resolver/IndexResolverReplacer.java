@@ -133,7 +133,7 @@ public final class IndexResolverReplacer {
         return false;
     }
 
-    private Resolved resolveIndexPatterns(final String... requestedPatterns) {
+    private Resolved resolveIndexPatterns(final IndicesOptions indicesOptions, final String... requestedPatterns) {
 
         if(log.isTraceEnabled()) {
             log.trace("resolve requestedPatterns: "+Arrays.toString(requestedPatterns));
@@ -169,7 +169,7 @@ public final class IndexResolverReplacer {
 
             List<String> _indices;
             try {
-                _indices = new ArrayList<>(Arrays.asList(resolver.concreteIndexNames(state, IndicesOptions.fromOptions(false, true, true, false), requestedPatterns)));
+                _indices = new ArrayList<>(Arrays.asList(resolver.concreteIndexNames(state, indicesOptions, requestedPatterns)));
                 if (log.isDebugEnabled()) {
                     log.debug("Resolved pattern {} to {}", requestedPatterns, _indices);
                 }
@@ -382,6 +382,11 @@ public final class IndexResolverReplacer {
             @Override
             public String[] provide(String[] original, Object localRequest, boolean supportsReplace) {
 
+                IndicesOptions indicesOptions = IndicesOptions.fromOptions(true, true, true, false);
+                if (localRequest instanceof IndicesRequest) {
+                    indicesOptions = ((IndicesRequest) localRequest).indicesOptions();
+                }
+
                 //CCS
                 if((localRequest instanceof FieldCapabilitiesRequest || localRequest instanceof SearchRequest)
                         && (request instanceof FieldCapabilitiesRequest || request instanceof SearchRequest)) {
@@ -393,7 +398,6 @@ public final class IndexResolverReplacer {
                         }
                         original = ccsResult.v2();
                     }
-
                 }
                 if(returnEmpty.get()) {
 
@@ -402,7 +406,7 @@ public final class IndexResolverReplacer {
                     }
 
                 } else {
-                    final Resolved iResolved = resolveIndexPatterns(original);
+                    final Resolved iResolved = resolveIndexPatterns(indicesOptions, original);
 
                     if(log.isTraceEnabled()) {
                         log.trace("Resolved patterns {} for {} ({}) to {}", original, localRequest.getClass().getSimpleName(), request.getClass().getSimpleName(), iResolved);
